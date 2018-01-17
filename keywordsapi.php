@@ -23,14 +23,25 @@ class GetKeywords {
         ->withOAuth2Credential($oAuth2Credential)
 		->withClientCustomerId($_GET['c_id'])
         ->build();
-    self::runExample($session, $_GET['id']);
+    self::runExample($session, $_GET['id'],@$_POST['from'],@$_POST['to']);
   }
 
-public static function runExample(AdWordsSession $session, $adGroupId) {
+public static function runExample(AdWordsSession $session, $adGroupId,$from=NULL,$to=NULL) {
+	 if($from=="" || $to==""){ $during = 'LAST_7_DAYS'; } 
+	else{ 
+	 
+		//$datef = str_replace('/', '-', $from);
+		$dateFrom = date('Ymd', strtotime($from));
+		
+		//$datet = str_replace('/', '-', $to);
+  		$dateTo = date('Ymd', strtotime($to));
+ 		$during = $dateFrom.",".$dateTo; 
+		} 
+
      $reportQuery = 'select AdGroupId,DisplayName,Clicks,Impressions,Cost,AverageCpc,AverageCost,CampaignStatus
 					from CRITERIA_PERFORMANCE_REPORT
 					where AdGroupId = '.$adGroupId.'
-					during LAST_7_DAYS';
+					during '.$during;
 
 		// Download report as a string.
 		$reportDownloader = new ReportDownloader($session);
@@ -43,12 +54,22 @@ public static function runExample(AdWordsSession $session, $adGroupId) {
 		$reportDownloadResult = $reportDownloader->downloadReportWithAwql(
 		$reportQuery, DownloadFormat::CSV, $reportSettingsOverride);
 		// print "Report was downloaded and printed below:\n";
-		echo "<pre>";
-		$data1 = explode("\n", $reportDownloadResult->getAsString());
-
-	echo "<pre>";
-	 //print_r($page->getEntries()); ?>
-	 <table border=1 align="center">
+ 		$data1 = explode("\n", $reportDownloadResult->getAsString());
+?>
+		<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+ 		<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+		<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+		<script src="assets/script.js"></script>
+		<?php include('filter.php'); ?>
+		 <pre>
+		<table border=1 align="center">
+		<tr>
+		<?php if(isset($_POST['from']) && isset($_POST['to'])){ ?>
+				<td colspan="13" align="center"> Results From <?php echo @$_POST['from']; ?> to <?php echo @$_POST['to']; ?></td>
+		<?php }else{ ?>
+				<td colspan="13" align="center"> Results From Last 7 days</td>
+		<?php } ?>
+	</tr>
 		<?php $i=0;
 			foreach ($data1 as $campaign) {
 			 $data = explode(",", $campaign);
@@ -59,8 +80,12 @@ public static function runExample(AdWordsSession $session, $adGroupId) {
 					<th><?php echo $data[1]; ?></th>
 					<th><?php echo $data[2]; ?></th>
 					<th><?php echo $data[3]; ?></th>
-					<th><?php echo $data[4]; ?></th>
+					<th>Target Spends</th>
 					<th><?php echo $data[5]; ?></th>
+					<th>Target CPO</th>
+					<th>Target Revenue</th>
+					<th>Target Leads</th>
+					<th>Target Orders</th>
 				</tr>
 			<?php }else{ ?>
 				<tr>
@@ -72,9 +97,7 @@ public static function runExample(AdWordsSession $session, $adGroupId) {
 					<td><?php echo  round(($data[5]/1000000),2); ?></td>
 				</tr>
 			<?php	//print_r($data);
-				
-
-				}
+ 				}
 				if($i==(count($data1)-2)){  break; }
 				$i++;
 			}

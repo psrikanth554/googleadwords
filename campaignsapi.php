@@ -35,9 +35,9 @@ class GetCampaigns {
         ->withOAuth2Credential($oAuth2Credential)
 		->withClientCustomerId($_GET['id'])
         ->build();
-    self::runExample(new AdWordsServices(), $session);
+    self::runExample(new AdWordsServices(), $session,@$_POST['from'],@$_POST['to']);
   }
-   public static function runExample(AdWordsServices $adWordsServices, AdWordsSession $session) {
+   public static function runExample(AdWordsServices $adWordsServices, AdWordsSession $session,$from=NULL,$to=NULL) {
 
 		$campaignService = $adWordsServices->get($session, CampaignService::class);
  
@@ -50,10 +50,22 @@ class GetCampaigns {
 		 $page = $campaignService->get($selector);
 
 			 
+if($from=="" || $to==""){ $during = 'LAST_7_DAYS'; } 
+	else{ 
+	 
+		//$datef = str_replace('/', '-', $from);
+		$dateFrom = date('Ymd', strtotime($from));
+		
+		//$datet = str_replace('/', '-', $to);
+  		$dateTo = date('Ymd', strtotime($to));
+ 		$during = $dateFrom.",".$dateTo; 
+		} 
 
   $reportQuery = 'select CampaignId,CampaignName,Clicks,Impressions,Cost,AverageCpc,Amount,AverageCpm,Ctr
 					from CAMPAIGN_PERFORMANCE_REPORT
-					during LAST_7_DAYS';
+					during '.$during;
+
+
 $reportDownloader = new ReportDownloader($session);
 $reportSettingsOverride = (new ReportSettingsBuilder())
         ->includeZeroImpressions(true)
@@ -63,11 +75,26 @@ $reportSettingsOverride = (new ReportSettingsBuilder())
    // print "Report was downloaded and printed below:\n";
      // print $reportDownloadResult->getAsString();
 	  $data1 = explode("\n", $reportDownloadResult->getAsString());
-	  echo "<pre>";
+	  //echo "<pre>";
   ?>
-
+ 
+  <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+  <style>
+  .pagination li{ display:inline;}
+  </style>
+   <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+   <script src="assets/script.js"></script>
+ <?php include('filter.php'); ?>
+ <pre>
 	<table border=1 align="center">
-		
+		<tr>
+		<?php if(isset($_POST['from']) && isset($_POST['to'])){ ?>
+				<td colspan="13" align="center"> Results From <?php echo @$_POST['from']; ?> to <?php echo @$_POST['to']; ?></td>
+		<?php }else{ ?>
+				<td colspan="13" align="center"> Results From Last 7 days</td>
+		<?php } ?>
+	</tr>
 <?php $i=0;
 foreach ($data1 as $campaign) {
  $data = explode(",", $campaign);
@@ -78,11 +105,15 @@ foreach ($data1 as $campaign) {
 		<th><?php echo $data[1]; ?></th>
 		<th><?php echo $data[2]; ?></th>
 		<th><?php echo $data[3]; ?></th>
-		<th><?php echo $data[4]; ?></th>
+		<th>Target Cost</th>
 		<th><?php echo $data[5]; ?></th>
 		<th><?php echo $data[6]; ?></th>
 		<th><?php echo $data[7]; ?></th>
 		<th><?php echo $data[8]; ?></th>
+		<th>Target CPO</th>
+		<th>Target Leads</th>
+		<th>Target Revenue</th>
+		<th>Target Orders</th>
   	</tr>
 <?php }else{ ?>
 	<tr>
